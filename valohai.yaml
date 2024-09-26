@@ -1,0 +1,43 @@
+- step:
+    name: load_dicom
+    image: python:3.9
+    environment: sama-aws-eu-west-1-p2-xlarge
+    command:
+      - pip install SimpleITK pyradiomics PyWavelets pykwalify numpy==1.26.4
+      - pip install pydicom
+      - pip install matplotlib ipywidgets
+      - pip install valohai-utils
+      - pip install tqdm
+      - pip install scikit-image
+      - python load_dicom.py
+    inputs:
+      - name: hcc_dataset
+        default: https://valohai-demo-library-data.s3.eu-west-1.amazonaws.com/dicom-example/hcc_short.zip
+
+- step:
+    name: extract_radiomics
+    image: python:3.9
+    environment: azure-westeurope-f2sv2
+    command:
+      - pip install SimpleITK pyradiomics PyWavelets pykwalify numpy==1.26.4
+      - pip install pydicom
+      - pip install matplotlib ipywidgets
+      - pip install valohai-utils
+      - pip install tqdm
+      - pip install scikit-image
+      - python extract_radiomics.py
+    inputs:
+      - name: prep_hcc_dataset
+        default: datum://hcc_data
+
+- pipeline:
+    name: hcc_pipeline
+    nodes:
+      - name: load
+        type: execution
+        step: load_dicom
+      - name: extract_radiomics
+        type: execution
+        step: extract_radiomics
+    edges:
+      - [ load.output.*.csv, extract_radiomics.input.prep_hcc_dataset ]
