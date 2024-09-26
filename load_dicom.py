@@ -23,7 +23,7 @@ def visualize_dicom_slices(dicom_images, patient_dir, output_dir):
             plt.close()
 
 
-def main():
+def load_dataset(save, viz):
     zip_path = "/valohai/inputs/hcc_dataset/hcc_short.zip"
     output_path = '/valohai/outputs/'
 
@@ -71,8 +71,9 @@ def main():
             # Process the images (sorting and retrieving pixel data)
             processed_dicomset, dicom_pixel_array, slice_thickness, pixel_spacing = process_image_data(dicom_images)
 
-            # Visualize and save DICOM slices
-            visualize_dicom_slices(dicom_pixel_array, patient_dir, output_dir=output_path)
+            if viz:
+                # Visualize and save DICOM slices
+                visualize_dicom_slices(dicom_pixel_array, patient_dir, output_dir=output_path)
 
             seg_file_path = seg_path / '1-1.dcm'
             if seg_file_path.exists():
@@ -85,9 +86,10 @@ def main():
                     'slice_thickness': slice_thickness,
                     'pixel_spacing': pixel_spacing
                 }
-
-    save_to_csv(data)
+    if save:
+        save_to_csv(data)
+    return data
 
 
 if __name__ == "__main__":
-    main()
+    load_dataset(save=True, viz=True)
