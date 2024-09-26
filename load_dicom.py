@@ -23,8 +23,7 @@ def visualize_dicom_slices(dicom_images, patient_dir, output_dir):
             plt.close()
 
 
-def load_dataset(save, viz):
-    zip_path = "/valohai/inputs/hcc_dataset/hcc_short.zip"
+def load_dataset(zip_path, save, viz):
     output_path = '/valohai/outputs/'
 
     base_path = unzip_dataset(zip_path, './unzipped_dataset')
@@ -92,4 +91,5 @@ def load_dataset(save, viz):
 
 
 if __name__ == "__main__":
-    load_dataset(save=True, viz=True)
+    data_path = "/valohai/inputs/hcc_dataset/hcc_short.zip"
+    load_dataset(data_path, save=True, viz=True)
