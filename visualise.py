@@ -106,7 +106,7 @@ def apply_windowing(image, window_level, window_width):
 
 
 # Function to visualize and save DICOM slices with multiple segmentations
-def visualize_dicom_slices(dicom_images, seg_dict, patient_id, output_dir, slice_thickness, pixel_spacing,
+def visualize_dicom(dicom_images, seg_dict, patient_id, output_dir, slice_thickness, pixel_spacing,
                            plane='axial', alpha=0.5, slice_indices=None):
     """
     Visualize DICOM slices with segmentation masks and save them to the output directory.
