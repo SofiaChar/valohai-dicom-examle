@@ -1,6 +1,5 @@
-import csv
-import json
 import os
+import h5py
 import pydicom
 import numpy as np
 import zipfile
@@ -27,7 +26,6 @@ def load_dicom_images(path):
             filepath = os.path.join(path, filename)
             ds = pydicom.dcmread(filepath)
             img_dcmset.append(ds)
-            # images.append(ds.pixel_array)
     return img_dcmset
 
 
@@ -48,17 +46,6 @@ def process_image_data(img_dcmset):
 
 
 def apply_windowing(ct_array, window_level, window_width):
-    """
-    Apply windowing to CT image data.
-
-    Parameters:
-    - ct_array: numpy array of the CT image.
-    - window_level: window level value.
-    - window_width: window width value.
-
-    Returns:
-    - Windowed image array.
-    """
     lower_bound = window_level - (window_width / 2)
     upper_bound = window_level + (window_width / 2)
     windowed_array = np.clip(ct_array, lower_bound, upper_bound)
@@ -104,110 +91,37 @@ def create_segmentation_dict(seg_dcm, img_dcm, img_pixel_array):
     return segmentation_dict
 
 
-def save_to_csv(data, filename='/valohai/outputs/hcc_data.csv'):
-    # Flatten the data into a list of dictionaries suitable for writing to a CSV
-    flattened_data = []
+def load_hcc_data(file_path):
+    """Load patient data from HDF5 format."""
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Patient data file {file_path} not found")
 
-    for patient_id, patient_data in data.items():
-        # Base dictionary with patient-level information
-        base_flat_dict = {
-            'patient_id': patient_id,
-            'slice_thickness': patient_data['slice_thickness'],
-            'pixel_spacing': patient_data['pixel_spacing'],
+    # Open the HDF5 file and load data
+    with h5py.File(file_path, 'r') as hdf:
+        print("Keys: %s" % hdf.keys())
+        slice_thickness = hdf.attrs['slice_thickness']
+        pixel_spacing = hdf.attrs['pixel_spacing']
+
+        # Load ct_images
+        ct_images = hdf['ct_images'][:]
+
+        # Load segmentation masks (one for each organ)
+        liver_segmentation = hdf.get('seg_liver', None)
+        aorta_segmentation = hdf.get('seg_abdominalaorta', None)
+        portalvein_segmentation = hdf.get('seg_portalvein', None)
+        mass_segmentation = hdf.get('seg_mass', None)
+
+        # Store data for this patient
+        data = {
+            'ct_images': ct_images,
+            'slice_thickness': slice_thickness,
+            'pixel_spacing': pixel_spacing,
+            'segmentation': {
+                'liver': liver_segmentation[:],
+                'aorta': aorta_segmentation[:],
+                'portalvein': portalvein_segmentation[:],
+                'mass': mass_segmentation[:]
+            }
         }
 
-        # Flatten the ct_images and store it along with its shape
-        ct_images = patient_data['ct_images']
-        flat_ct_images = ct_images.flatten().tolist()  # Flatten the array to save as a list in CSV
-        base_flat_dict['ct_images'] = flat_ct_images
-        base_flat_dict['ct_images_shape'] = ct_images.shape  # Store the shape of the CT images
-
-        # Now flatten the seg_dict
-        segmentation = patient_data.get('segmentation', {})
-
-        for organ, segmentation_array in segmentation.items():
-            # Flatten the segmentation array and store it along with its shape
-            flat_array = segmentation_array.flatten().tolist()  # Convert array to a flat list for CSV storage
-            base_flat_dict[f'{organ}_segmentation'] = flat_array
-            base_flat_dict[f'{organ}_shape'] = segmentation_array.shape  # Save the shape of the array
-
-        flattened_data.append(base_flat_dict)
-
-    # Make sure there's data to write
-    if flattened_data:
-        # Get all the keys from the first entry for the CSV header
-        keys = flattened_data[0].keys()
-
-        # Write the data to the CSV file
-        with open(filename, 'w', newline='') as output_file:
-            dict_writer = csv.DictWriter(output_file, fieldnames=keys)
-            dict_writer.writeheader()
-            dict_writer.writerows(flattened_data)
-
-        # Save metadata
-        metadata = {"valohai.alias": "hcc_data"}
-        metadata_path = '/valohai/outputs/hcc_data.csv.metadata.json'
-        with open(metadata_path, 'w') as outfile:
-            json.dump(metadata, outfile)
-
-    else:
-        print("No data to write to CSV.")
-
-
-def parse_array_from_string(array_string, shape):
-    """Convert a flattened string representation of an array to a numpy array and reshape it."""
-    # Remove brackets and extra spaces
-    cleaned_str = array_string.replace('[', '').replace(']', '').strip()
-
-    # Convert the cleaned string to a numpy array (assuming the data is space-separated)
-    array = np.fromstring(cleaned_str, sep=' ')
-
-    # Reshape the array based on the provided shape
-    reshaped_array = array.reshape(shape)
-
-    return reshaped_array
-
-def load_hcc_data(file_path):
-    """Load hcc_data.csv containing CT images and segmentations."""
-    # Increase CSV field size limit to avoid the field limit error
-    csv.field_size_limit(sys.maxsize)
-
-    data = {}
-
-    with open(file_path, 'r') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            patient_id = row['patient_id']
-            slice_thickness = float(row['slice_thickness'])
-            pixel_spacing = float(row['pixel_spacing'])
-
-            # Parse and reshape ct_images
-            ct_images_shape = eval(row['ct_images_shape'])  # Convert shape string back to a tuple
-            ct_images = parse_array_from_string(row['ct_images'], ct_images_shape)
-
-            # Parse segmentation arrays and reshape using the saved shape
-            liver_shape = eval(row['liver_shape'])  # Convert shape back to a tuple
-            liver_segmentation = parse_array_from_string(row['liver_segmentation'], liver_shape)
-
-            aorta_shape = eval(row['aorta_shape'])
-            aorta_segmentation = parse_array_from_string(row['aorta_segmentation'], aorta_shape)
-
-            portalvein_shape = eval(row['portalvein_shape'])
-            portalvein_segmentation = parse_array_from_string(row['portalvein_segmentation'], portalvein_shape)
-
-            mass_shape = eval(row['mass_shape'])
-            mass_segmentation = parse_array_from_string(row['mass_segmentation'], mass_shape)
-
-            # Store data for each patient
-            data[patient_id] = {
-                'ct_images': ct_images,
-                'slice_thickness': slice_thickness,
-                'pixel_spacing': pixel_spacing,
-                'segmentation': {
-                    'liver': liver_segmentation,
-                    'aorta': aorta_segmentation,
-                    'portalvein': portalvein_segmentation,
-                    'mass': mass_segmentation
-                }
-            }
     return data

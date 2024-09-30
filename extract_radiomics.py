@@ -1,14 +1,11 @@
-import argparse
 import csv
 import json
 import SimpleITK as sitk
-from tqdm import tqdm
 import os
 import numpy as np
 import radiomics
 from radiomics import featureextractor
 
-import sys
 from utils import load_hcc_data
 
 
@@ -47,19 +44,34 @@ def extract_radiomics_features(patient_data, organ_label):
     return features
 
 
-def save_radiomics_to_csv(all_features, output_filename='/valohai/outputs/hcc_radiomics.csv'):
+def save_radiomics_to_csv(features):
     """Save the extracted radiomics features to CSV."""
-    if not all_features:
+    if not features:
         print("No features to save.")
         return
 
+    # Convert numpy arrays to native Python types
+    for key, value in features.items():
+        if isinstance(value, np.ndarray):
+            features[key] = value.item()  # Convert to scalar if array is 1-element
+
+    pat_id = features['patient_id']
+    output_filename = f'/valohai/outputs/{pat_id}_radiomics.csv'
+
     with open(output_filename, 'w', newline='') as output_file:
-        fieldnames = all_features[0].keys()
+        fieldnames = features.keys()
         writer = csv.DictWriter(output_file, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(all_features)
+        writer.writerow(features)  # Write a single row since `features` is a dictionary
 
-    metadata = {"valohai.alias": "hcc_radiomics_extracted"}
+    # Use execution id as dataset version name
+    with open("/valohai/config/execution.json") as f:
+        exec_id = json.load(f)["valohai.execution-id"]
+
+    # Make it part of Valohai Dataset
+    metadata = {
+        "valohai.dataset-versions": [f"dataset://radiomics_extracted_from_dicom/{exec_id}"]
+    }
 
     metadata_path = f'{output_filename}.metadata.json'
     with open(metadata_path, 'w') as outfile:
@@ -70,14 +82,14 @@ def save_radiomics_to_csv(all_features, output_filename='/valohai/outputs/hcc_ra
 
 def main():
     # Load the data from hcc_data.csv
-    hcc_data_file = "/valohai/inputs/prep_hcc_dataset/hcc_data.csv"
-    data = load_hcc_data(hcc_data_file)
+    hcc_data_path = "/valohai/inputs/prep_hcc_dataset/"
+    for patient_file in os.listdir(hcc_data_path):
+        patient_id = os.path.splitext(patient_file)[0]
+        patient_data_path = os.path.join(hcc_data_path, patient_file)
+        patient_data = load_hcc_data(patient_data_path)
 
-    all_features = []
-    organ_label = 'mass'  # Specify which organ to extract features for
+        organ_label = 'mass'  # Specify which organ to extract features for
 
-    # Iterate over each patient and extract features
-    for patient_id, patient_data in tqdm(data.items()):
         print(f"Extracting features for patient {patient_id}")
 
         # Extract features for the specified organ
@@ -86,10 +98,9 @@ def main():
         # Append additional patient information to the features
         feature_dict = {'patient_id': patient_id, 'organ': organ_label}
         feature_dict.update(features)
-        all_features.append(feature_dict)
 
-    # Save extracted features to CSV
-    save_radiomics_to_csv(all_features)
+        # Save extracted features to CSV
+        save_radiomics_to_csv(feature_dict)
 
 
 if __name__ == "__main__":

@@ -28,7 +28,6 @@
       - python extract_radiomics.py
     inputs:
       - name: prep_hcc_dataset
-        default: datum://hcc_data
 
 - pipeline:
     name: hcc_pipeline
