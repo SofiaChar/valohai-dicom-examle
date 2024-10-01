@@ -88,7 +88,7 @@ def main():
         patient_data_path = os.path.join(hcc_data_path, patient_file)
         patient_data = load_hcc_data(patient_data_path)
 
-        organ_label = 'mass'  # Specify which organ to extract features for
+        organ_label = 'seg_mass'  # Specify which organ to extract features for
 
         print(f"Extracting features for patient {patient_id}")
 

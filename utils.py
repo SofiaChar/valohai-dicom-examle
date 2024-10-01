@@ -117,10 +117,10 @@ def load_hcc_data(file_path):
             'slice_thickness': slice_thickness,
             'pixel_spacing': pixel_spacing,
             'segmentation': {
-                'liver': liver_segmentation[:],
-                'aorta': aorta_segmentation[:],
-                'portalvein': portalvein_segmentation[:],
-                'mass': mass_segmentation[:]
+                'seg_liver': np.array(liver_segmentation),
+                'seg_abdominalaorta': np.array(aorta_segmentation),
+                'seg_portalvein': np.array(portalvein_segmentation),
+                'seg_mass': np.array(mass_segmentation)
             }
         }
 
