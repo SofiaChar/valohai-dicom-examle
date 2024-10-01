@@ -1,14 +1,8 @@
 - step:
     name: load_dicom
-    image: python:3.9
+    image: sofiiavalohai/dicom-example:v2
     environment: azure-westeurope-f2sv2
     command:
-      - pip install SimpleITK pyradiomics PyWavelets pykwalify numpy==1.26.4
-      - pip install pydicom
-      - pip install matplotlib ipywidgets
-      - pip install valohai-utils
-      - pip install tqdm h5py
-      - pip install scikit-image
       - python load_dicom.py
     inputs:
       - name: hcc_dataset
@@ -16,15 +10,9 @@
 
 - step:
     name: extract_radiomics
-    image: python:3.9
+    image: sofiiavalohai/dicom-example:v2
     environment: azure-westeurope-f2sv2
     command:
-      - pip install SimpleITK pyradiomics PyWavelets pykwalify numpy==1.26.4
-      - pip install pydicom
-      - pip install matplotlib ipywidgets
-      - pip install valohai-utils
-      - pip install tqdm h5py
-      - pip install scikit-image
       - python extract_radiomics.py
     inputs:
       - name: prep_hcc_dataset
