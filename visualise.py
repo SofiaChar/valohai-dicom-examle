@@ -106,7 +106,7 @@ def apply_windowing(image, window_level, window_width):
 
 
 # Function to visualize and save DICOM slices with multiple segmentations
-def visualize_dicom(dicom_images, seg_dict, patient_id, output_dir, slice_thickness, pixel_spacing,
+def visualize_dicom(patient_data, output_dir='/valohai/outputs/',
                            plane='axial', alpha=0.5, slice_indices=None):
     """
     Visualize DICOM slices with segmentation masks and save them to the output directory.
@@ -122,6 +122,13 @@ def visualize_dicom(dicom_images, seg_dict, patient_id, output_dir, slice_thickn
     - alpha: Transparency value for the segmentation mask overlay (0 = transparent, 1 = opaque).
     - slice_indices: List of specific slices to visualize. If None, defaults to all slices.
     """
+    patient_id = patient_data['patient_id']
+    dicom_images = patient_data['ct_images']  # Extract the 3D array of DICOM slices
+    seg_dict = patient_data['segmentation']
+
+    slice_thickness = float(patient_data['slice_thickness'])  # Extract slice thickness
+    pixel_spacing = float(patient_data['pixel_spacing'])
+
     os.makedirs(output_dir, exist_ok=True)
 
     # Define colors for different segmentation masks

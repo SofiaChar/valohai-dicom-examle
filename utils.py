@@ -96,31 +96,32 @@ def load_hcc_data(file_path):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Patient data file {file_path} not found")
 
+    patient_id = os.path.splitext(os.path.basename(file_path))[0]
     # Open the HDF5 file and load data
     with h5py.File(file_path, 'r') as hdf:
-        print("Keys: %s" % hdf.keys())
         slice_thickness = hdf.attrs['slice_thickness']
         pixel_spacing = hdf.attrs['pixel_spacing']
 
         # Load ct_images
-        ct_images = hdf['ct_images'][:]
+        ct_images = hdf['ct_images']
 
         # Load segmentation masks (one for each organ)
-        liver_segmentation = hdf.get('seg_liver', None)
-        aorta_segmentation = hdf.get('seg_abdominalaorta', None)
-        portalvein_segmentation = hdf.get('seg_portalvein', None)
-        mass_segmentation = hdf.get('seg_mass', None)
+        liver_segmentation = hdf['seg_liver']
+        aorta_segmentation = hdf['seg_abdominalaorta']
+        portalvein_segmentation = hdf['seg_portalvein']
+        mass_segmentation = hdf['seg_mass']
 
         # Store data for this patient
         data = {
-            'ct_images': ct_images,
+            'patient_id': patient_id,
+            'ct_images': np.array(ct_images),
             'slice_thickness': slice_thickness,
             'pixel_spacing': pixel_spacing,
             'segmentation': {
-                'seg_liver': np.array(liver_segmentation),
-                'seg_abdominalaorta': np.array(aorta_segmentation),
-                'seg_portalvein': np.array(portalvein_segmentation),
-                'seg_mass': np.array(mass_segmentation)
+                'seg_liver': np.array(liver_segmentation)[::-1, :, :],
+                'seg_abdominalaorta': np.array(aorta_segmentation)[::-1, :, :],
+                'seg_portalvein': np.array(portalvein_segmentation)[::-1, :, :],
+                'seg_mass': np.array(mass_segmentation)[::-1, :, :]
             }
         }
 

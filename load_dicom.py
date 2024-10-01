@@ -23,7 +23,7 @@ def save_patient_data_to_hdf5(patient_id, patient_data, output_dir='/valohai/out
         hdf.create_dataset('ct_images', data=patient_data['ct_images'])
 
         # Save each segmentation as a separate dataset
-        segmentation = patient_data.get('segmentation', {})
+        segmentation = patient_data['segmentation']
         for organ, segmentation_array in segmentation.items():
             hdf.create_dataset(f'{organ}', data=segmentation_array)
 
