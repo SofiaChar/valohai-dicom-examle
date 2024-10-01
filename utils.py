@@ -96,9 +96,9 @@ def load_hcc_data(file_path):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Patient data file {file_path} not found")
 
-    patient_id = os.path.splitext(os.path.basename(file_path))[0]
     # Open the HDF5 file and load data
     with h5py.File(file_path, 'r') as hdf:
+        patient_id = hdf.attrs['patient_id']
         slice_thickness = hdf.attrs['slice_thickness']
         pixel_spacing = hdf.attrs['pixel_spacing']
 

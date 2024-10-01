@@ -31,19 +31,26 @@ def visualize_dicom_slices(dicom_images, patient_dir, output_dir):
 
 
 # Function to create GIF from rotated DICOM slices with segmentation overlays
-def create_gif(img_pixelarray, seg_3d, slice_thickness, pixel_spacing, output_dir, patient_id, n_frames=30, alpha=0.3):
+def create_gif(patient_data, output_dir, n_frames=30, alpha=0.3):
     """
     Create a rotating Maximum Intensity Projection (MIP) GIF from 3D DICOM images and segmentation masks.
 
     Args:
-    - img_pixelarray: 3D array of DICOM images.
-    - seg_3d: 3D array of segmentation masks.
-    - slice_thickness: Thickness of each slice in mm.
-    - pixel_spacing: Pixel spacing in mm.
+    - patient_data: Dictionary with patient data
     - output_dir: Directory to save the resulting GIF.
     - n_frames: Number of frames in the GIF animation.
     - alpha: Transparency value for the segmentation mask overlay.
     """
+    patient_id = patient_data['patient_id']
+    img_pixelarray = patient_data['ct_images']  # Extract the 3D array of DICOM slices
+    seg_dict = patient_data['segmentation']  # Extract the segmentation dictionary
+    slice_thickness = float(patient_data['slice_thickness'])  # Extract slice thickness
+    pixel_spacing = float(patient_data['pixel_spacing'])  # Extract pixel spacing
+
+    seg_3d = np.zeros_like(img_pixelarray)
+    for idx, (seg_name, seg_mask) in enumerate(seg_dict.items(), 1):
+        seg_3d[seg_mask > 0] = idx
+
     os.makedirs(output_dir, exist_ok=True)
 
     frames = []
@@ -112,12 +119,8 @@ def visualize_dicom(patient_data, output_dir='/valohai/outputs/',
     Visualize DICOM slices with segmentation masks and save them to the output directory.
 
     Args:
-    - dicom_images: 3D array of DICOM slices.
-    - seg_dict: Dictionary of segmentation masks.
-    - patient_id: ID of the patient.
-    - output_dir: Directory to save the images.
-    - slice_thickness: Thickness of each slice in mm.
-    - pixel_spacing: Pixel spacing in mm.
+    - patient_data: Dictionary with patient data
+    - output_dir: Output directory
     - plane: Choose between 'axial', 'sagittal', and 'coronal'.
     - alpha: Transparency value for the segmentation mask overlay (0 = transparent, 1 = opaque).
     - slice_indices: List of specific slices to visualize. If None, defaults to all slices.

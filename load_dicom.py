@@ -6,7 +6,7 @@ import pydicom
 import matplotlib.pyplot as plt
 from pathlib import Path
 from utils import load_dicom_images, process_image_data, unzip_dataset, apply_windowing, create_segmentation_dict
-from visualise import visualize_dicom_slices
+from visualise import visualize_dicom_slices, visualize_dicom
 
 
 def save_patient_data_to_hdf5(patient_id, patient_data, output_dir='/valohai/outputs/'):
@@ -52,9 +52,10 @@ def process_patient_data(patient_dir, data_path, output_dir, viz):
         print(f"Skipping patient {patient_dir}: No segmentation or CT data found")
         return
 
-    dicom_images, dicom_pixel_array, slice_thickness, pixel_spacing = process_dicom_images(ct_path)
-    process_segmentation_data(seg_path, dicom_images, dicom_pixel_array, slice_thickness, pixel_spacing, patient_dir,
-                              output_dir)
+    processed_dicomset, dicom_pixel_array, slice_thickness, pixel_spacing = process_dicom_images(ct_path)
+
+    process_segmentation_data(seg_path, processed_dicomset, dicom_pixel_array, slice_thickness, pixel_spacing,
+                              patient_dir, output_dir)
 
     if viz:
         visualize_dicom_slices(dicom_pixel_array, patient_dir, output_dir)
@@ -81,23 +82,28 @@ def find_ct_and_seg_paths(earliest_date_folder):
 def process_dicom_images(ct_path):
     dicom_images = load_dicom_images(ct_path)
     processed_dicomset, dicom_pixel_array, slice_thickness, pixel_spacing = process_image_data(dicom_images)
-    return dicom_images, dicom_pixel_array, slice_thickness, pixel_spacing
+    return processed_dicomset, dicom_pixel_array, slice_thickness, pixel_spacing
 
 
-def process_segmentation_data(seg_path, dicom_images, dicom_pixel_array, slice_thickness, pixel_spacing, patient_dir,
-                              output_dir):
+def process_segmentation_data(seg_path, processed_dicomset, dicom_pixel_array, slice_thickness, pixel_spacing,
+                              patient_dir, output_dir):
     seg_file_path = seg_path / '1-1.dcm'
     if seg_file_path.exists():
         ds = pydicom.dcmread(seg_file_path)
-        seg_dict = create_segmentation_dict(ds, dicom_images, dicom_pixel_array)
+        seg_dict = create_segmentation_dict(ds, processed_dicomset, dicom_pixel_array)
+        if patient_dir == 'HCC_003':  # error in the dataset. the segmentation is fliped
+            flipped_seg_dict = {key: np.flip(value, axis=1) for key, value in seg_dict.items()}
+            seg_dict = {key: np.flip(value, axis=2) for key, value in flipped_seg_dict.items()}
 
         patient_data = {
+            'patient_id': patient_dir,
             'ct_images': dicom_pixel_array,
             'segmentation': seg_dict,
             'slice_thickness': slice_thickness,
             'pixel_spacing': pixel_spacing
         }
 
+        visualize_dicom(patient_data, slice_indices=[10, 20, 30])
         save_patient_data_to_hdf5(patient_dir, patient_data, output_dir)
 
 
