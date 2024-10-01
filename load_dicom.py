@@ -103,7 +103,6 @@ def process_segmentation_data(seg_path, processed_dicomset, dicom_pixel_array, s
             'pixel_spacing': pixel_spacing
         }
 
-        visualize_dicom(patient_data, slice_indices=[10, 20, 30])
         save_patient_data_to_hdf5(patient_dir, patient_data, output_dir)
 
 
